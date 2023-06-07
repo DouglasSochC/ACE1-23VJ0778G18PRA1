@@ -184,3 +184,8 @@ struct Bomba {
 };
 
 Bomba bombas[16];
+
+struct Digitos {
+  int digito1;
+  int digito2;
+};
