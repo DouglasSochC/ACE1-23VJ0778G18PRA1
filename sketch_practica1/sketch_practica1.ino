@@ -17,6 +17,7 @@ short pinIni = 47;                                     // Pin para manejar el bo
 LedControl matriz_driver = LedControl(51, 53, 52, 1);  // Matriz con driver
 
 // Juego
+short vidas = 3;                     // Indica la cantidad de vidas que tiene en el juego actual
 short nivel = 1;                     // Indica el nivel actual de juego
 short edificios_a_destruir = 0;      // Indica la cantidad de edificios que hay que destruir en el nivel actual de juego
 short pos_x_avion = 0;               // Indica la posicion del avion en el eje x de la matriz
@@ -55,8 +56,18 @@ void loop() {
     imprimirMenuPrincipal();
   } else if (estado_app == "JUGAR") {
 
-    // Redibuja los edificios en el tablero en el caso que no halla mas edificios por destruir
+    // Muestra el nivel y redibuja los edificios en el tablero en el caso que no halla mas edificios por destruir
     if (edificios_a_destruir == 0) {
+      
+      // Obtiene el tiempo actual en milisegundos
+      unsigned long tiempoInicio = millis();
+
+      // Muestra el mensaje del nivel durante 2 segundos
+      while (millis() - tiempoInicio < 2000) {
+        imprimirMensajeNivel();
+      }
+
+      // Dibuja los edificios la matriz 'tablero'
       dibujarEdificios();
     }
 
@@ -113,25 +124,55 @@ void imprimirTablero() {
 // Dibuja el avion en el tablero
 void dibujarAvion() {
   if (avion_hacia_izquierda) {
+
+    // Imprime la parte alta del avion
     if (pos_y_avion >= 0 && pos_y_avion < 16) {
       tablero[pos_x_avion][pos_y_avion] = 1;
     }
+
+    // Imprime la parte baja del avion
     for (int i = 0; i < 3; i++) {
       if (pos_y_avion - i >= 0 && pos_y_avion - i < 16) {
         tablero[pos_x_avion + 1][pos_y_avion - i] = 1;
       }
     }
-    pos_y_avion = pos_y_avion < 0 ? 18 : pos_y_avion;
+
+    // Si el avion colisiona contra un edificio se sube 2 unidades hacia arriba
+    if (pos_y_avion - 3 >= 0 && pos_y_avion - 3 < 16 && tablero[pos_x_avion + 1][pos_y_avion - 3] == 1) {
+      movimientoAvion();
+      pos_x_avion = pos_x_avion - 3 ;
+    }  
+
+    // Si el avion llega a la parte final del tablero se baja un nivel y se reaparece del lado contrario
+    if(pos_y_avion < 0){
+      pos_y_avion = 18;
+      pos_x_avion++;
+    }
   } else {
+
+    // Imprime la parte alta del avion
     if (pos_y_avion >= 0 && pos_y_avion < 16) {
       tablero[pos_x_avion][pos_y_avion] = 1;
     }
+
+    // Imprime la parte baja del avion
     for (int i = 0; i < 3; i++) {
       if (pos_y_avion + i >= 0 && pos_y_avion + i < 16) {
         tablero[pos_x_avion + 1][pos_y_avion + i] = 1;
       }
     }
-    pos_y_avion = pos_y_avion > 16 ? -3 : pos_y_avion;
+
+    // Si el avion colisiona contra un edificio se sube 2 unidades hacia arriba
+    if (pos_y_avion + 3 >= 0 && pos_y_avion + 3 < 16 && tablero[pos_x_avion + 1][pos_y_avion + 3] == 1) {
+      movimientoAvion();
+      pos_x_avion = pos_x_avion - 3 ;
+    }
+
+    // Si el avion llega a la parte final del tablero se baja un nivel y se reaparece del lado contrario
+    if(pos_y_avion > 16){
+      pos_y_avion = -3;
+      pos_x_avion++;
+    }
   }
 }
 
@@ -368,6 +409,39 @@ void botonIzquierdo() {
   }
 
   ultimo_estado_boton_izq = btnIzquierda;
+}
+
+/***************************/
+/********** NIVEL ***********/
+/***************************/
+
+void imprimirMensajeNivel() {
+
+  // Matriz sin driver
+  for (int i = 0; i < 9; i++) {
+    seleccionarFila(i);
+    for (int j = 0; j < 8; j++) {
+      setearEstadoEnColumna(j, caracter_nivel[i][j]);
+    }
+    delay(1);
+  }
+
+
+  // Matriz con driver - Primer digito
+  int primer_digito = nivel / 10;
+  for (int fila = 0; fila < 8; fila++) {
+    for (int columna = 0; columna < 4; columna++) {
+      matriz_driver.setLed(0, fila, 7 - columna, numeros[primer_digito][fila][columna]);
+    }  
+  }  
+
+  // Matriz con driver - Segundo digito
+  int segundo_digito = nivel - primer_digito * 10;
+  for (int fila = 0; fila < 8; fila++) {
+    for (int columna = 0; columna < 4; columna++) {
+      matriz_driver.setLed(0, fila, 3 - columna, numeros[segundo_digito][fila][columna]);
+    }  
+  }
 }
 
 /***************************/
