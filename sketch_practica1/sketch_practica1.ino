@@ -17,13 +17,15 @@ short pinIni = 47;                                     // Pin para manejar el bo
 LedControl matriz_driver = LedControl(51, 53, 52, 1);  // Matriz con driver
 
 // Juego
-short vidas = 3;                     // Indica la cantidad de vidas que tiene en el juego actual
-short nivel = 1;                     // Indica el nivel actual de juego
-short edificios_a_destruir = 0;      // Indica la cantidad de edificios que hay que destruir en el nivel actual de juego
-short pos_x_avion = 0;               // Indica la posicion del avion en el eje x de la matriz
-short pos_y_avion = -3;              // Indica la posicion del avion en el eje y de la matriz
-bool avion_hacia_izquierda = false;  // Indica la direccion de movimiento del avion
-String estado_app = "MENSAJE";       // Indica el estado actual en el que esta el programa; Estos pueden ser: MENSAJE, MENU, JUGAR, PAUSA, ESTADISTICA, CONFIGURACION
+short vidas = 3;                            // Indica la cantidad de vidas que tiene en el juego actual
+short nivel = 1;                            // Indica el nivel actual de juego
+short edificios_a_destruir = 0;             // Indica la cantidad de edificios que hay que destruir en el nivel actual de juego
+short edificios_destruidos = 0;             // Indica la cantidad de edificios que el usuario a destruido desde que ha iniciado el juego
+short pos_x_avion = 0;                      // Indica la posicion del avion en el eje x de la matriz
+short pos_y_avion = -3;                     // Indica la posicion del avion en el eje y de la matriz
+bool avion_hacia_izquierda = false;         // Indica la direccion de movimiento del avion
+String estado_app = "MENSAJE";              // Indica el estado actual en el que esta el programa; Estos pueden ser: MENSAJE, MENU, JUGAR, PAUSA, ESTADISTICA, CONFIGURACION
+short estadisticas[5] = { 0, 0, 0, 0, 0 };  // Sirve para almacenar los 5 mejores puntajes
 
 void setup() {
   inicializarMatrizSinDriver();  // Inicializando la matriz sin driver
@@ -58,7 +60,7 @@ void loop() {
 
     // Muestra el nivel y redibuja los edificios en el tablero en el caso que no halla mas edificios por destruir
     if (edificios_a_destruir == 0) {
-      
+
       // Obtiene el tiempo actual en milisegundos
       unsigned long tiempoInicio = millis();
 
@@ -139,12 +141,18 @@ void dibujarAvion() {
 
     // Si el avion colisiona contra un edificio se sube 2 unidades hacia arriba
     if (pos_y_avion - 3 >= 0 && pos_y_avion - 3 < 16 && tablero[pos_x_avion + 1][pos_y_avion - 3] == 1) {
-      movimientoAvion();
-      pos_x_avion = pos_x_avion - 3 ;
-    }  
+      vidas--;
+      if (vidas > 0) {
+        movimientoAvion();
+        pos_x_avion = pos_x_avion - 3;
+      } else {
+        reiniciarJuego();
+        estado_app = "MENSAJE";
+      }
+    }
 
     // Si el avion llega a la parte final del tablero se baja un nivel y se reaparece del lado contrario
-    if(pos_y_avion < 0){
+    if (pos_y_avion < 0) {
       pos_y_avion = 18;
       pos_x_avion++;
     }
@@ -164,12 +172,18 @@ void dibujarAvion() {
 
     // Si el avion colisiona contra un edificio se sube 2 unidades hacia arriba
     if (pos_y_avion + 3 >= 0 && pos_y_avion + 3 < 16 && tablero[pos_x_avion + 1][pos_y_avion + 3] == 1) {
-      movimientoAvion();
-      pos_x_avion = pos_x_avion - 3 ;
+      vidas--;
+      if (vidas > 0) {
+        movimientoAvion();
+        pos_x_avion = pos_x_avion - 3;
+      } else {
+        reiniciarJuego();
+        estado_app = "MENSAJE";
+      }
     }
 
     // Si el avion llega a la parte final del tablero se baja un nivel y se reaparece del lado contrario
-    if(pos_y_avion > 16){
+    if (pos_y_avion > 16) {
       pos_y_avion = -3;
       pos_x_avion++;
     }
@@ -218,6 +232,22 @@ void movimientoBomba() {
       // Colosiona contra un edificio
       if (tablero[bombas[i].x + 2][bombas[i].y] == 1) {
 
+        // Se acumula el edificio destruido
+        edificios_destruidos++;
+
+        // Se agrega la cantidad de edificios que se ha destruido durante el juego en las estadisticas
+        for (int i = 0; i < sizeof(estadisticas) / sizeof(estadisticas[0]); i++) {
+          if (edificios_destruidos > estadisticas[i]) {
+            estadisticas[i] = edificios_destruidos;
+            break;
+          }
+        }
+
+        // En el caso que halla destruido 5 edificios se le agregara una vida extra
+        if (edificios_destruidos % 5 == 0) {
+          vidas++;
+        }
+
         // Se borra el edificio
         for (int j = bombas[i].x + 1; j < 8; j++) {
           tablero[j][bombas[i].y] = 0;
@@ -228,12 +258,21 @@ void movimientoBomba() {
         bombas[i].x = -1;
         bombas[i].y = -1;
 
-        // Se reinicia el juego una vez se halla destruido todos los edificios
+        // Se disminuye la cantidad de edificios a destruir
         edificios_a_destruir--;
+
+        // Se pasa al siguiente nivel una vez halla destruido todos los edificios y en el caso que sobrepase el nivel 10,
+        // se va a la pantalla principal finalizando asi el juego
         if (edificios_a_destruir == 0) {
           nivel++;
-          movimientoAvion();
-          pos_y_avion = avion_hacia_izquierda ? 18 : -3;
+          if (nivel > 10) {
+            reiniciarJuego();
+            estado_app = "MENSAJE";
+          } else {
+            movimientoAvion();
+            pos_y_avion = avion_hacia_izquierda ? 18 : -3;
+            pos_x_avion = 0;
+          }
         }
 
       }
@@ -328,7 +367,7 @@ void botonDisparo() {
         if (estado_app == "MENU") {
           estado_app = "ESTADISTICA";
         } else if (estado_app == "JUGAR") {
-          for (int i = 0; i < 16; i++) {
+          for (int i = 0; i < sizeof(bombas) / sizeof(bombas[0]); i++) {
             if (bombas[i].x == -1 && bombas[i].y == -1) {
               if (avion_hacia_izquierda) {
                 bombas[i].y = pos_y_avion - 1;
@@ -432,16 +471,24 @@ void imprimirMensajeNivel() {
   for (int fila = 0; fila < 8; fila++) {
     for (int columna = 0; columna < 4; columna++) {
       matriz_driver.setLed(0, fila, 7 - columna, numeros[primer_digito][fila][columna]);
-    }  
-  }  
+    }
+  }
 
   // Matriz con driver - Segundo digito
   int segundo_digito = nivel - primer_digito * 10;
   for (int fila = 0; fila < 8; fila++) {
     for (int columna = 0; columna < 4; columna++) {
       matriz_driver.setLed(0, fila, 3 - columna, numeros[segundo_digito][fila][columna]);
-    }  
+    }
   }
+}
+
+void reiniciarJuego() {
+  nivel = 1;
+  edificios_a_destruir = 0;
+  pos_x_avion = 0;
+  pos_y_avion = -3;
+  edificios_destruidos = 0;
 }
 
 /***************************/
