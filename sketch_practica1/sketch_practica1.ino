@@ -86,16 +86,7 @@ void loop() {
     dibujarBomba();
     imprimirTablero();
   }else if (estado_app == "PAUSA"){
-    int numero = 87; // Ejemplo de número a procesar
-    Digitos digitos = obtenerDigitos(numero);
-  
-    int digito1 = digitos.digito1;
-    int digito2 = digitos.digito2;
-  
-    Serial.print("Dígito 1: ");
-    Serial.println(digito1);
-    Serial.print("Dígito 2: ");
-    Serial.println(digito2);
+    imprimirMenuPausa(vidas);  
   }
 
   // potenciometro = map(analogRead(A0), 0, 1024, 200, 800);
@@ -453,6 +444,37 @@ void imprimirMensajeNivel() {
       matriz_driver.setLed(0, fila, 3 - columna, numeros[segundo_digito][fila][columna]);
     }  
   }
+}
+
+
+/******IMPRIMIR MENU PAUSA******/
+void imprimirMenuPausa(int vidas){
+  Digitos digitos = obtenerDigitos(vidas);
+  int digito1 = digitos.digito1;
+  int digito2 = digitos.digito2;
+  Serial.println(digito1);
+  Serial.println(digito2);
+  for (int i = 0; i < 9; i++) {
+    seleccionarFila(i);
+    for (int j = 0; j < 8; j++) {
+      setearEstadoEnColumna(j, caracter_vidas[i][j]);
+    }
+    delay(1);
+  }
+
+  for (int fila = 0; fila < 8; fila++) {
+    for (int columna = 0; columna < 4; columna++) {
+      matriz_driver.setLed(0, fila, 7 - columna, numeros[digito1][fila][columna]);
+    }  
+  }  
+
+  // Matriz con driver - Segundo digito
+  for (int fila = 0; fila < 8; fila++) {
+    for (int columna = 0; columna < 4; columna++) {
+      matriz_driver.setLed(0, fila, 3 - columna, numeros[digito2][fila][columna]);
+    }  
+  }
+  
 }
 
 /***************************/
