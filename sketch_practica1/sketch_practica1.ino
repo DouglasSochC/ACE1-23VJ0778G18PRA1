@@ -18,7 +18,9 @@ LedControl matriz_driver = LedControl(51, 53, 52, 1);  // Matriz con driver
 
 // Juego
 short vidas = 3;                            // Indica la cantidad de vidas que tiene en el juego actual
+short vidasConfiguracion = 3;        
 short nivel = 1;                            // Indica el nivel actual de juego
+short velocidadInicial = 1;                 // Indica el nivel de velocidad del juego
 short edificios_a_destruir = 0;             // Indica la cantidad de edificios que hay que destruir en el nivel actual de juego
 short edificios_destruidos = 0;             // Indica la cantidad de edificios que el usuario a destruido desde que ha iniciado el juego
 short pos_x_avion = 0;                      // Indica la posicion del avion en el eje x de la matriz
@@ -45,7 +47,7 @@ void loop() {
 
     // Definiendo la velocidad de recorrido del mensaje
     t1 = millis();
-    if (t1 - t0 >= 200) {
+    if (t1 - t0 >= 300 / velocidadInicial) {
       offset++;
       t0 = millis();
     }
@@ -75,7 +77,7 @@ void loop() {
 
     // Definiendo la velocidad de recorrido del avion
     t1 = millis();
-    if (t1 - t0 >= 200) {
+    if (t1 - t0 >= 300 / velocidadInicial) {
       offset++;
       t0 = millis();
 
@@ -87,8 +89,10 @@ void loop() {
     dibujarAvion();
     dibujarBomba();
     imprimirTablero();
-  }else if (estado_app == "PAUSA"){
-    imprimirMenuPausa(vidas);  
+  } else if (estado_app == "PAUSA") {
+    imprimirMenuPausa(vidas);
+  } else if (estado_app == "CONFIGURACION") {
+    imprimirMenuDeConfiguracion(vidas, velocidadInicial);
   }
 
   // potenciometro = map(analogRead(A0), 0, 1024, 200, 800);
@@ -99,6 +103,7 @@ void loop() {
   botonIzquierdo();
   botonDisparo();
 }
+
 
 /***************************/
 /********** JUEGO **********/
@@ -337,13 +342,20 @@ void botonK() {
       else if (estado_app == "JUGAR" && lapso_tiempo >= 2000) {
         estado_app = "PAUSA";
       }
+      // Regresar al menu principal
+      else if (estado_app == "PAUSA" && lapso_tiempo >= 3000) {
+        reiniciarJuego();
+        estado_app = "MENU";
+      }
       // Entra a la pausa del juego
       else if (estado_app == "PAUSA" && lapso_tiempo >= 2000) {
         estado_app = "JUGAR";
       }
-      // Regresar al menu principal
-      else if (estado_app == "PAUSA" && (lapso_tiempo >= 2000 && lapso_tiempo < 3000)) {
+      // Regresar al menu principal si esta en configuracion
+      else if(estado_app == "CONFIGURACION" && lapso_tiempo >= 3000){
         estado_app = "MENU";
+      }else if(estado_app == "MENU" && lapso_tiempo > 2000){
+        estado_app = "MENSAJE";
       }
     }
   }
@@ -491,6 +503,12 @@ void reiniciarJuego() {
   pos_x_avion = 0;
   pos_y_avion = -3;
   edificios_destruidos = 0;
+  vidas = vidasConfiguracion;
+  for(int i = 0; i < 8; i++){
+      for(int j = 0; j < 16; j++){
+        tablero[i][j] = 0;
+     }
+  }
 }
 
 /***************************/
@@ -516,9 +534,51 @@ void imprimirMenuPrincipal() {
   }
 }
 
+/******IMPRIMIR MENU CONFIGURACION******/
+void imprimirMenuDeConfiguracion(int velocidadInicialJuego, int vidasInicial) {
+  int newVelocidad = map(analogRead(A0), 0, 1023, 1, 3);
+  Serial.print("velocidad: ");
+  Serial.println(newVelocidad);
+  if (vidasInicial <= 10) {
+
+    int newVidas = map(analogRead(A1), 0, 1023, 3, 10);
+    Serial.print("vidas: ");
+    Serial.println(newVidas);
+
+    //Imprime barra inferior
+    for (int fila = 4; fila < 8; fila++) {
+      for (int columna = 0; columna < 8; columna++) {
+        matriz_driver.setLed(0, fila, 7 - columna, barra[newVidas - 4][fila][columna]);
+      }
+    }
+    vidasConfiguracion = newVidas;
+    vidas = newVidas;
+  }
+
+
+
+
+
+  for (int i = 0; i < 9; i++) {
+    seleccionarFila(i);
+    for (int j = 0; j < 8; j++) {
+      setearEstadoEnColumna(j, caracter_config[i][j]);
+    }
+    delay(1);
+  }
+
+  //Imprime barra superior
+  for (int fila = 0; fila < 4; fila++) {
+    for (int columna = 0; columna < 8; columna++) {
+      matriz_driver.setLed(0, fila, 7 - columna, barra[newVelocidad][fila][columna]);
+    }
+  }
+  velocidadInicial = newVelocidad;
+}
+
 
 /******IMPRIMIR MENU PAUSA******/
-void imprimirMenuPausa(int vidas){
+void imprimirMenuPausa(int vidas) {
   Digitos digitos = obtenerDigitos(vidas);
   int digito1 = digitos.digito1;
   int digito2 = digitos.digito2;
@@ -535,16 +595,16 @@ void imprimirMenuPausa(int vidas){
   for (int fila = 0; fila < 8; fila++) {
     for (int columna = 0; columna < 4; columna++) {
       matriz_driver.setLed(0, fila, 7 - columna, numeros[digito1][fila][columna]);
-    }  
-  }  
+    }
+  }
 
   // Matriz con driver - Segundo digito
   for (int fila = 0; fila < 8; fila++) {
     for (int columna = 0; columna < 4; columna++) {
       matriz_driver.setLed(0, fila, 3 - columna, numeros[digito2][fila][columna]);
-    }  
+    }
   }
-  
+
 }
 
 
