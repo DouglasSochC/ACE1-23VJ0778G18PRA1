@@ -93,6 +93,8 @@ void loop() {
     imprimirMenuPausa(vidas);
   } else if (estado_app == "CONFIGURACION") {
     imprimirMenuDeConfiguracion(vidas, velocidadInicial);
+  } else if (estado_app == "ESTADISTICA") {
+    imprimirEstadisticas();
   }
 
   // potenciometro = map(analogRead(A0), 0, 1024, 200, 800);
@@ -153,6 +155,7 @@ void dibujarAvion() {
         movimientoAvion();
         pos_x_avion = pos_x_avion - 3;
       } else {
+        almacenarPuntajeFinal();
         reiniciarJuego();
         estado_app = "MENSAJE";
       }
@@ -184,6 +187,7 @@ void dibujarAvion() {
         movimientoAvion();
         pos_x_avion = pos_x_avion - 3;
       } else {
+        almacenarPuntajeFinal();
         reiniciarJuego();
         estado_app = "MENSAJE";
       }
@@ -242,14 +246,6 @@ void movimientoBomba() {
         // Se acumula el edificio destruido
         edificios_destruidos++;
 
-        // Se agrega la cantidad de edificios que se ha destruido durante el juego en las estadisticas
-        for (int i = 0; i < sizeof(estadisticas) / sizeof(estadisticas[0]); i++) {
-          if (edificios_destruidos > estadisticas[i]) {
-            estadisticas[i] = edificios_destruidos;
-            break;
-          }
-        }
-
         // En el caso que halla destruido 5 edificios se le agregara una vida extra
         if (edificios_destruidos % 5 == 0) {
           vidas++;
@@ -273,6 +269,7 @@ void movimientoBomba() {
         if (edificios_a_destruir == 0) {
           nivel++;
           if (nivel > 10) {
+            almacenarPuntajeFinal();
             reiniciarJuego();
             estado_app = "MENSAJE";
           } else {
@@ -344,6 +341,7 @@ void botonK() {
       }
       // Regresar al menu principal
       else if (estado_app == "PAUSA" && lapso_tiempo >= 3000) {
+        almacenarPuntajeFinal();
         reiniciarJuego();
         estado_app = "MENU";
       }
@@ -356,6 +354,10 @@ void botonK() {
         estado_app = "MENU";
       }else if(estado_app == "MENU" && lapso_tiempo > 2000){
         estado_app = "MENSAJE";
+      }
+      // Regresar al menu principal si esta en estadistica
+      else if (estado_app == "ESTADISTICA" && lapso_tiempo >= 3000) {
+        estado_app = "MENU";
       }
     }
   }
@@ -506,8 +508,31 @@ void reiniciarJuego() {
   vidas = vidasConfiguracion;
   for(int i = 0; i < 8; i++){
       for(int j = 0; j < 16; j++){
-        tablero[i][j] = 0;
-     }
+      tablero[i][j] = 0;
+    }
+  }
+}
+
+void almacenarPuntajeFinal() {
+
+  // Se agrega la cantidad de edificios que se ha destruido durante el juego en las estadisticas
+  bool mayor = true;
+  for (int i = 0; i < sizeof(estadisticas) / sizeof(estadisticas[0]); i++) {
+    if (estadisticas[i] == 0) {
+      estadisticas[i] = edificios_destruidos;
+      mayor = false;
+      break;
+    }
+  }
+
+  // En el caso que ya se hayan llenado todos los slots de estadisticas se modificara el valor mas pequenio
+  if (mayor) {
+    for (int i = 0; i < sizeof(estadisticas) / sizeof(estadisticas[0]); i++) {
+      if (edificios_destruidos > estadisticas[i]) {
+        estadisticas[i] = edificios_destruidos;
+        break;
+      }
+    }
   }
 }
 
@@ -576,6 +601,53 @@ void imprimirMenuDeConfiguracion(int velocidadInicialJuego, int vidasInicial) {
   velocidadInicial = newVelocidad;
 }
 
+/******IMPRIMIR ESTADISTICAS******/
+void imprimirEstadisticas() {
+
+  int total = 0;
+  bool temp[8][16] = {
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+  };
+
+  // Se determina el total de puntos que hay en la variable estadisticas
+  for (int i = 0; i < sizeof(estadisticas) / sizeof(estadisticas[0]); i++) {
+    total += estadisticas[i];
+  }
+
+  // Se dibuja cada barra vertical
+  int pos_dibujo = 1;
+  for (int i = 0; i < sizeof(estadisticas) / sizeof(estadisticas[0]); i++) {
+    int altura = estadisticas[i] * 8 / total;
+    for (int j = 0; j < altura; j++) {
+      temp[7 - j][pos_dibujo] = 1;
+      temp[7 - j][pos_dibujo + 1] = 1;
+    }
+    pos_dibujo += 3;
+  }
+
+  // Matriz sin driver
+  for (int i = 0; i < 9; i++) {
+    seleccionarFila(i);
+    for (int j = 0; j < 8; j++) {
+      setearEstadoEnColumna(j, temp[i][j]);
+    }
+    delay(1);
+  }
+
+  // Matriz con driver
+  for (int i = 0; i < 8; i++) {
+    for (int j = 8; j < 16; j++) {
+      matriz_driver.setLed(0, i, 15 - j, temp[i][j]);
+    }
+  }
+}
 
 /******IMPRIMIR MENU PAUSA******/
 void imprimirMenuPausa(int vidas) {
@@ -604,7 +676,6 @@ void imprimirMenuPausa(int vidas) {
       matriz_driver.setLed(0, fila, 3 - columna, numeros[digito2][fila][columna]);
     }
   }
-
 }
 
 
