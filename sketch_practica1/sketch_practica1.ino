@@ -601,7 +601,7 @@ void imprimirMenuDeConfiguracion(int velocidadInicialJuego, int vidasInicial) {
   velocidadInicial = newVelocidad;
 }
 
-/******IMPRIMIR ESTADISTICAS******/
+/****** IMPRIMIR TABLERO DE ESTADISTICAS ******/
 void imprimirEstadisticas() {
 
   int total = 0;
